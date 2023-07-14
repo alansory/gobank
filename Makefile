@@ -12,6 +12,8 @@ migrateup_last:
 	migrate -database "postgres://postgres:secret@localhost:5432/gobank?sslmode=disable" -path database/migration up 1
 migratedown_last:
 	migrate -database "postgres://postgres:secret@localhost:5432/gobank?sslmode=disable" -path database/migration down 1
+sqlc:
+	sqlc generate
 build:
 	@go build -o bin/gobank
 run: build
