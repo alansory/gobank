@@ -1,4 +1,4 @@
--- name: createAccount :one
+-- name: CreateAccount :one
 INSERT INTO accounts (
   user_id,
   balance,
@@ -16,7 +16,7 @@ SELECT * FROM accounts
 WHERE id = $1 limit 1
 FOR NO KEY UPDATE;
 
--- name: listAccounts :many
+-- name: ListAccounts :many
 SELECT * FROM accounts
 WHERE user_id = $1
 ORDER BY id
@@ -28,3 +28,13 @@ UPDATE accounts
 SET balance = $2, currency = $3
 WHERE id = $1
 RETURNING *;
+
+-- name: AddAccountBalance :one
+UPDATE accounts
+SET balance = balance + sqlc.arg(amount)
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: DeleteAccount :exec
+DELETE FROM accounts
+WHERE id = $1;
