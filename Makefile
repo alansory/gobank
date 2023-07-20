@@ -14,9 +14,9 @@ migratedown_last:
 	migrate -database "postgres://postgres:secret@localhost:5432/gobank?sslmode=disable" -path database/migration down 1
 sqlc:
 	sqlc generate
-build:
-	@go build -o bin/gobank
-run: build
-	@./bin/gobank
 test:
 	go test -v -cover -short ./...
+server:
+	go run main.go
+
+.PHONY: createdb dropdb migrate_create migrateup migratedown migrateup_last migratedown_last sqlc test server

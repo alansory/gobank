@@ -11,11 +11,6 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const (
-	dbDriver = "postgres"
-	dbSource = "postgres://postgres:secret@localhost:5432/gobank?sslmode=disable"
-)
-
 var testStore Store
 
 func TestMain(m *testing.M) {
