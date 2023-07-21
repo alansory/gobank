@@ -18,5 +18,7 @@ test:
 	go test -v -cover -short ./...
 server:
 	go run main.go
-
-.PHONY: createdb dropdb migrate_create migrateup migratedown migrateup_last migratedown_last sqlc test server
+mock:
+	mockgen -package mockdb -destination database/mock/store.go github.com/alansory/gobank/database/sqlc Store
+	
+.PHONY: createdb dropdb migrate_create migrateup migratedown migrateup_last migratedown_last sqlc test server mock
