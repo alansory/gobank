@@ -1,17 +1,17 @@
 package api
 
 import (
-	"database/sql"
 	"net/http"
 
 	db "github.com/alansory/gobank/database/sqlc"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/gin-gonic/gin"
 )
 
 type createAccountRequest struct {
 	UserID   int64  `json:"user_id" binding:"required"`
-	Currency string `json:"currency" binding:"required,oneof=USD IDR"`
+	Currency string `json:"currency" binding:"required,currency"`
 }
 
 func (server *Server) createAccount(ctx *gin.Context) {
@@ -48,11 +48,10 @@ func (server *Server) getAccount(ctx *gin.Context) {
 	}
 	account, err := server.store.GetAccount(ctx, req.ID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if err == pgx.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err, ctx))
 			return
 		}
-
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
 		return
 	}
