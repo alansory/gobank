@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"regexp"
 	"time"
 
 	db "github.com/alansory/gobank/database/sqlc"
@@ -11,7 +12,8 @@ import (
 )
 
 type createUserRequest struct {
-	Username string `json:"username" binding:"required,alphanum"`
+	Username string `json:"username"`
+	Fullname string `json:"fullname" binding:"required"`
 	Password string `json:"password" binding:"required,min=6"`
 	Email    string `json:"email" binding:"required,email"`
 }
@@ -22,6 +24,7 @@ type loginUserRequest struct {
 }
 
 type userResponse struct {
+	Fullname          string    `json:"fullname"`
 	Username          string    `json:"username"`
 	Email             string    `json:"email"`
 	PasswordChangedAt time.Time `json:"password_changed_at"`
@@ -37,6 +40,7 @@ type loginUserResponse struct {
 
 func newUserResponse(user db.User) userResponse {
 	return userResponse{
+		Fullname:          user.Fullname,
 		Username:          user.Username,
 		Email:             user.Email,
 		PasswordChangedAt: user.PasswordChangedAt,
@@ -57,9 +61,11 @@ func (server *Server) createUser(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
 		return
 	}
-
+	re := regexp.MustCompile(`^(.*?)@.*$`)
+	username := re.ReplaceAllString(req.Email, "${1}")
 	arg := db.CreateUserParams{
-		Username:       req.Username,
+		Fullname:       req.Fullname,
+		Username:       username,
 		HashedPassword: hashedPassword,
 		Email:          req.Email,
 	}

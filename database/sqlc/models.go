@@ -39,6 +39,7 @@ type Transfer struct {
 type User struct {
 	ID                int64
 	Email             string
+	Fullname          string
 	Username          string
 	HashedPassword    string
 	PasswordChangedAt time.Time

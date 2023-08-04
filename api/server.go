@@ -2,6 +2,8 @@ package api
 
 import (
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	db "github.com/alansory/gobank/database/sqlc"
@@ -53,10 +55,38 @@ func (server *Server) Start(address string) error {
 }
 
 func errorResponse(err error, ctx *gin.Context) gin.H {
-	if ctx.Request.Method == "POST" {
-		if ctx.Request.ContentLength == 0 || !strings.Contains(ctx.ContentType(), "application/json") {
-			return gin.H{"error": "Invalid or empty JSON data"}
-		}
+
+	report := gin.H{
+		"error": gin.H{
+			"status_code": http.StatusInternalServerError,
+			"message":     err.Error(),
+		},
 	}
-	return gin.H{"error": err.Error()}
+
+	if validationErrors, ok := err.(validator.ValidationErrors); ok {
+		report["error"].(gin.H)["status_code"] = http.StatusUnprocessableEntity
+		report["error"].(gin.H)["message"] = "422 Unprocessable Entity"
+		errors := make(map[string]string)
+
+		for _, validationErr := range validationErrors {
+			switch validationErr.Tag() {
+			case "required":
+				errors[strings.ToLower(validationErr.Field())] = fmt.Sprintf("The %s field is required", strings.ToLower(validationErr.Field()))
+			case "email":
+				errors[strings.ToLower(validationErr.Field())] = fmt.Sprintf("The %s field is not a valid email", strings.ToLower(validationErr.Field()))
+			case "gte":
+				errors[strings.ToLower(validationErr.Field())] = fmt.Sprintf("The %s field value must be greater than %s", strings.ToLower(validationErr.Field()), validationErr.Param())
+			case "lte":
+				errors[strings.ToLower(validationErr.Field())] = fmt.Sprintf("The %s field value must be lower than %s", strings.ToLower(validationErr.Field()), validationErr.Param())
+			}
+		}
+		report["error"].(gin.H)["errors"] = errors
+	}
+
+	if err == io.EOF {
+		report["error"].(gin.H)["status_code"] = http.StatusBadRequest
+		report["error"].(gin.H)["message"] = "JSON data is missing or malformed"
+	}
+
+	return report
 }
