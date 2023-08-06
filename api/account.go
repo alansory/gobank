@@ -17,7 +17,7 @@ type createAccountRequest struct {
 func (server *Server) createAccount(ctx *gin.Context) {
 	var req createAccountRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return
 	}
 
@@ -29,7 +29,7 @@ func (server *Server) createAccount(ctx *gin.Context) {
 
 	account, err := server.store.CreateAccount(ctx, arg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 
@@ -43,16 +43,16 @@ type getAccountRequest struct {
 func (server *Server) getAccount(ctx *gin.Context) {
 	var req getAccountRequest
 	if err := ctx.ShouldBindUri(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return
 	}
 	account, err := server.store.GetAccount(ctx, req.ID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err, ctx))
+			errorResponse(http.StatusNotFound, err, ctx)
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 

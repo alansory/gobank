@@ -52,13 +52,13 @@ func newUserResponse(user db.User) userResponse {
 func (server *Server) createUser(ctx *gin.Context) {
 	var req createUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return
 	}
 
 	hashedPassword, err := util.HashPassword(req.Password)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 	re := regexp.MustCompile(`^(.*?)@.*$`)
@@ -73,37 +73,38 @@ func (server *Server) createUser(ctx *gin.Context) {
 	user, err := server.store.CreateUser(ctx, arg)
 	if err != nil {
 		if db.ErrorCode(err) == db.UniqueViolation {
-			ctx.JSON(http.StatusForbidden, errorResponse(err, ctx))
+			errorResponse(http.StatusForbidden, err, ctx)
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 
 	rsp := newUserResponse(user)
-	ctx.JSON(http.StatusOK, rsp)
+	successResponse(http.StatusOK, "Registration successful.", rsp, ctx)
+	return
 }
 
 func (server *Server) loginUser(ctx *gin.Context) {
 	var req loginUserRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return
 	}
 
 	user, err := server.store.GetUser(ctx, req.Email)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err, ctx))
+			errorResponse(http.StatusNotFound, err, ctx)
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 
 	err = util.CheckPassword(req.Password, user.HashedPassword)
 	if err != nil {
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err, ctx))
+		errorResponse(http.StatusUnauthorized, err, ctx)
 		return
 	}
 
@@ -113,7 +114,7 @@ func (server *Server) loginUser(ctx *gin.Context) {
 	)
 
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return
 	}
 
@@ -122,5 +123,6 @@ func (server *Server) loginUser(ctx *gin.Context) {
 		User:        newUserResponse(user),
 		// AccessTokenExpiredAt: accessPayload.ExpiredAt,
 	}
-	ctx.JSON(http.StatusOK, rsp)
+	successResponse(http.StatusOK, "Login successful.", rsp, ctx)
+	return
 }

@@ -54,21 +54,39 @@ func (server *Server) Start(address string) error {
 	return server.router.Run(address)
 }
 
-func errorResponse(err error, ctx *gin.Context) gin.H {
+func successResponse(statusCode int, message string, data interface{}, ctx *gin.Context) gin.H {
+	result := gin.H{
+		"data":        data,
+		"status_code": statusCode,
+		"message":     message,
+	}
+	ctx.JSON(statusCode, result)
+	return result
+}
+
+func errorResponse(statusCode int, err error, ctx *gin.Context) gin.H {
+	statusCode = func() int {
+		if statusCode == 0 {
+			return http.StatusInternalServerError
+		}
+		return statusCode
+	}()
 
 	report := gin.H{
 		"error": gin.H{
-			"status_code": http.StatusInternalServerError,
+			"status_code": statusCode,
 			"message":     err.Error(),
 		},
 	}
 
-	if validationErrors, ok := err.(validator.ValidationErrors); ok {
-		report["error"].(gin.H)["status_code"] = http.StatusUnprocessableEntity
+	switch v := err.(type) {
+	case validator.ValidationErrors:
+		statusCode = http.StatusUnprocessableEntity
+		report["error"].(gin.H)["status_code"] = statusCode
 		report["error"].(gin.H)["message"] = "422 Unprocessable Entity"
 		errors := make(map[string]string)
 
-		for _, validationErr := range validationErrors {
+		for _, validationErr := range v {
 			switch validationErr.Tag() {
 			case "required":
 				errors[strings.ToLower(validationErr.Field())] = fmt.Sprintf("The %s field is required", strings.ToLower(validationErr.Field()))
@@ -81,12 +99,14 @@ func errorResponse(err error, ctx *gin.Context) gin.H {
 			}
 		}
 		report["error"].(gin.H)["errors"] = errors
+	case error:
+		if err == io.EOF {
+			statusCode = http.StatusBadRequest
+			report["error"].(gin.H)["status_code"] = http.StatusBadRequest
+			report["error"].(gin.H)["message"] = "JSON data is missing or malformed"
+		}
 	}
 
-	if err == io.EOF {
-		report["error"].(gin.H)["status_code"] = http.StatusBadRequest
-		report["error"].(gin.H)["message"] = "JSON data is missing or malformed"
-	}
-
+	ctx.JSON(statusCode, report)
 	return report
 }

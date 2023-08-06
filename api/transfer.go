@@ -19,7 +19,7 @@ type transferRequest struct {
 func (server *Server) createTransfer(ctx *gin.Context) {
 	var req transferRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return
 	}
 
@@ -39,7 +39,7 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 
 	result, err := server.store.TransferTx(ctx, arg)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		ctx.JSON(http.StatusInternalServerError, errorResponse(http.StatusInternalServerError, err, ctx))
 	}
 
 	ctx.JSON(http.StatusOK, result)
@@ -49,16 +49,16 @@ func (server *Server) validAccount(ctx *gin.Context, accountID int64, currency s
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			ctx.JSON(http.StatusNotFound, errorResponse(err, ctx))
+			errorResponse(http.StatusNotFound, err, ctx)
 			return false
 		}
 
-		ctx.JSON(http.StatusInternalServerError, errorResponse(err, ctx))
+		errorResponse(http.StatusInternalServerError, err, ctx)
 		return false
 	}
 	if account.Currency != currency {
 		err := fmt.Errorf("account [%d] currency mismatch: %s vs %s", account.ID, account.Currency, currency)
-		ctx.JSON(http.StatusBadRequest, errorResponse(err, ctx))
+		errorResponse(http.StatusBadRequest, err, ctx)
 		return false
 	}
 	return true
